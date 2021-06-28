@@ -281,3 +281,32 @@ ORDER BY a.category, a.vendor_code;
 SELECT *
 FROM available_sizes
 WHERE category = "Платья" OR category = "Юбки";
+
+
+
+/* МОДИФИКАЦИЯ
+Создать процедуру, в которой будет out/inout параметр, а также условие ifnull*/
+# Получить номер телефона клиента
+DROP PROCEDURE IF EXISTS get_client_phone;
+DELIMITER $$
+CREATE PROCEDURE get_client_phone(IN client_name VARCHAR(45), OUT client_phone VARCHAR(13))
+BEGIN
+	SELECT 
+		phone
+	INTO client_phone
+	FROM clients
+	WHERE name = client_name;
+
+     set client_phone = if(client_phone is null, 'не определено', client_phone);
+     
+END $$
+DELIMITER ;
+
+CALL get_client_phone('Обломов Дмитрий', @phone);  
+SELECT @phone AS phone;
+
+CALL get_client_phone('"Roman Ter999say"', @phone);
+SELECT @phone AS phone;
+
+CALL get_client_phone('Мякинина Юлия', @phone);
+SELECT @phone AS phone;
