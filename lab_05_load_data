@@ -1,0 +1,110 @@
+USE clothes_shop;
+SET SQL_SAFE_UPDATES = 0;
+SHOW VARIABLES LIKE "secure_file_priv";
+show variables like "local_infile";
+set global local_infile = 1;
+
+# Клиенты
+LOAD DATA INFILE 'C:/ProgramData/MySQL/MySQL Server 8.0/Uploads/clients.csv'
+INTO TABLE clients
+FIELDS TERMINATED BY ','
+IGNORE 1 ROWS
+(name, gender, age , phone);
+
+# Сотрудники
+LOAD DATA INFILE 'C:/ProgramData/MySQL/MySQL Server 8.0/Uploads/employees.csv'
+INTO TABLE employees
+FIELDS TERMINATED BY ','
+IGNORE 1 ROWS
+(name, position, salary, education, hiring_time, gender);
+
+# Графики работы
+LOAD DATA INFILE 'C:/ProgramData/MySQL/MySQL Server 8.0/Uploads/schedules.csv'
+INTO TABLE schedules
+FIELDS TERMINATED BY ','
+IGNORE 1 ROWS
+(start_time, end_time);
+
+# Основатели брендов
+LOAD DATA INFILE 'C:/ProgramData/MySQL/MySQL Server 8.0/Uploads/founders.csv'
+INTO TABLE founders
+FIELDS TERMINATED BY ','
+IGNORE 1 ROWS
+(name);
+
+# Бренды
+LOAD DATA INFILE 'C:/ProgramData/MySQL/MySQL Server 8.0/Uploads/brands.csv'
+INTO TABLE brands
+FIELDS TERMINATED BY ';'
+IGNORE 1 ROWS
+(name, year_of_foundation, country);
+
+# Бренды и основатели
+LOAD DATA INFILE 'C:/ProgramData/MySQL/MySQL Server 8.0/Uploads/brands_to_founders.csv'
+INTO TABLE brands_to_founders
+FIELDS TERMINATED BY ','
+IGNORE 1 ROWS
+(id_brand, id_founder);
+
+# Заказы
+LOAD DATA INFILE 'C:/ProgramData/MySQL/MySQL Server 8.0/Uploads/bookings.csv'
+INTO TABLE bookings
+FIELDS TERMINATED BY ','
+IGNORE 1 ROWS
+(payment_method, date_time, id_client, id_employee);
+
+# Склады/магазины
+LOAD DATA INFILE 'C:/ProgramData/MySQL/MySQL Server 8.0/Uploads/storages.csv'
+INTO TABLE storages
+FIELDS TERMINATED BY ','
+IGNORE 1 ROWS
+(address, type);
+
+# Карты
+LOAD DATA INFILE 'C:/ProgramData/MySQL/MySQL Server 8.0/Uploads/discount_cards.csv'
+INTO TABLE discount_cards
+FIELDS TERMINATED BY ','
+IGNORE 1 ROWS
+(id_discount_card, current_bonuses_amounts, date);
+
+# Доставки
+LOAD DATA INFILE 'C:/ProgramData/MySQL/MySQL Server 8.0/Uploads/deliveries.csv'
+INTO TABLE deliveries
+FIELDS TERMINATED BY ','
+IGNORE 1 ROWS
+(id_delivery, address, price, date);
+
+# Работники-графики
+LOAD DATA INFILE 'C:/ProgramData/MySQL/MySQL Server 8.0/Uploads/schedules_to_employees.csv'
+INTO TABLE schedules_to_employees
+FIELDS TERMINATED BY ','
+IGNORE 1 ROWS
+(id_employee, id_schedule, week_day);
+
+# Товары
+LOAD DATA INFILE 'C:/ProgramData/MySQL/MySQL Server 8.0/Uploads/abstract_products.csv'
+INTO TABLE abstract_products
+FIELDS TERMINATED BY ','
+IGNORE 1 ROWS
+(price, rating, department, id_brand);
+
+# Экземпляры товаров
+LOAD DATA INFILE 'C:/ProgramData/MySQL/MySQL Server 8.0/Uploads/example_products.csv'
+INTO TABLE example_products
+FIELDS TERMINATED BY ','
+IGNORE 1 ROWS
+(color, amount, id_storage, vendor_code);
+
+# Заказы и товары
+LOAD DATA INFILE 'C:/ProgramData/MySQL/MySQL Server 8.0/Uploads/example_products_to_bookings.csv'
+INTO TABLE example_products_to_bookings
+FIELDS TERMINATED BY ','
+IGNORE 1 ROWS
+(id_booking, id_example_product, amount);
+
+# Товары и компонеты
+LOAD DATA INFILE 'C:/ProgramData/MySQL/MySQL Server 8.0/Uploads/products_to_components.csv'
+INTO TABLE products_to_components
+FIELDS TERMINATED BY ','
+IGNORE 1 ROWS
+(id_product, id_component, `%`);
