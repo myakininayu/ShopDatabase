@@ -1,0 +1,119 @@
+# Процедуры
+#1 Вывести полную инф-ю о товаре
+DROP PROCEDURE IF EXISTS get_aLL_product_info;
+DELIMITER $$
+CREATE PROCEDURE get_aLL_product_info(IN vendor_code INT)
+BEGIN
+	SELECT
+	a.vendor_code,
+    a.price,
+    a.category,
+    a.department,
+    br.name,
+    a.model,
+    a.rating,
+    a.material,
+    c.name,
+    pr_to_c.`%`,
+    e.size,
+    e.color,
+    e.amount,
+    IF(e.amount > 10, 'Много товара', 'Мало товара') AS if_res,
+    s.address AS storage_addr,
+    s.type AS storage_type
+FROM abstract_products a
+JOIN example_products e
+	ON a.vendor_code = e.vendor_code
+JOIN storages s
+	ON s.id_storage = e.id_storage
+JOIN products_to_components pr_to_c
+	ON a.vendor_code = pr_to_c.id_product
+JOIN components c
+	ON pr_to_c.id_component = c.id_component
+JOIN brands br
+	ON br.id_brand = a.id_brand
+WHERE a.vendor_code = vendor_code;   
+END$$
+DELIMITER ;
+CALL get_aLL_product_info(2);
+
+#2 Рассчитать стоимость товаров в определенном заказе вместе с доставкой
+DROP PROCEDURE IF EXISTS get_booking_price;
+DELIMITER $$
+CREATE PROCEDURE get_booking_price(IN id_booking INT)
+BEGIN
+
+DECLARE finished INTEGER DEFAULT 0;
+DECLARE delivery_id INT DEFAULT 0;
+DECLARE delivery_price INT DEFAULT 0;
+
+-- Получить цену доставки
+-- Объявить курсор для delivery
+DEClARE cur_delivery_info
+	CURSOR FOR 
+		SELECT id_delivery, price FROM deliveries;
+
+-- Объявить NOT FOUND handler
+DECLARE CONTINUE HANDLER 
+	FOR NOT FOUND SET finished = 1;
+
+OPEN cur_delivery_info;
+
+get_delivery_price: LOOP
+	FETCH cur_delivery_info INTO delivery_id, delivery_price;
+    
+    IF(delivery_id = id_booking) THEN
+    SET finished = 1;
+    END IF;
+    
+	IF finished = 1 THEN 
+	LEAVE get_delivery_price;
+	END IF;
+    
+END LOOP get_delivery_price;
+CLOSE cur_delivery_info;
+
+SELECT
+	b.id_booking, 
+	c.name AS client_name, 
+	b.date_time, 
+    SUM(a.price * e_to_b.amount) AS booking_price,
+    delivery_price,
+    SUM(a.price * e_to_b.amount) + delivery_price AS overall_price
+FROM bookings b
+JOIN example_products_to_bookings e_to_b
+	ON b.id_booking = e_to_b.id_booking
+JOIN example_products e
+	ON e_to_b.id_example_product = e.id_example_product
+JOIN abstract_products a
+	ON a.vendor_code = e.vendor_code
+JOIN clients c
+	ON b.id_client = c.id_client
+JOIN deliveries d
+	ON b.id_booking = d.id_delivery
+WHERE b.id_booking = id_booking;
+ 
+END$$
+DELIMITER ;
+CALL get_booking_price(2);
+
+#3 Вывести кол-во заказов за определенный месяц
+DROP PROCEDURE IF EXISTS get_bookings_num;
+DELIMITER $$
+CREATE PROCEDURE get_bookings_num(IN `year` YEAR, IN `month` INT)
+BEGIN
+	SELECT 
+	`year`, `month`,
+    COUNT(*) AS bookings_num,
+    CASE
+    WHEN COUNT(*) = 0 THEN 'Не было оформлено ни одного заказа'
+    WHEN COUNT(*) > 10 AND COUNT(*) <= 50 THEN 'Было оформлено мало заказов'
+    WHEN COUNT(*) > 50 AND COUNT(*) <= 100 THEN 'Было оформлено среднее кол-во заказов'
+    ELSE 'Было оформлено много заказов'
+	END AS extra_info
+FROM   bookings
+WHERE  MONTH(date_time) = `month` 
+	   AND YEAR(date_time) = `year`;   
+END$$
+DELIMITER ;
+CALL get_bookings_num(2021, 5);
