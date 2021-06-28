@@ -213,3 +213,71 @@ SELECT name, get_employee_income(2021, 2, name) AS money_for_sold_products
 FROM employees
 WHERE NOT ISNULL(get_employee_income(2021, 2, name))
 LIMIT 15;
+
+
+# Представления
+#1 Показать товары из женского отдела
+DROP VIEW IF EXISTS female_products;
+CREATE VIEW female_products
+AS 
+SELECT 
+    a.vendor_code, 
+    a.price, 
+    a.category, 
+    a.model,
+    a.material,
+    a.rating,
+    b.name AS brand
+FROM
+    abstract_products a
+JOIN brands b
+ON a.id_brand = b.id_brand
+WHERE a.department = "женский";
+
+SELECT *
+FROM female_products
+WHERE price <= 1000
+ORDER BY category, price, rating;
+
+#2 Найти склад/магазин, где экземляров каждого товара меньше необходимого минимума
+DROP VIEW IF EXISTS products_shortage;
+CREATE VIEW products_shortage
+AS
+SELECT 
+	ex_pr.vendor_code, 
+	ex_pr.color, 
+	ex_pr.size,
+    ex_pr.amount,
+	10 AS min_needed_amount, 
+	st.address 
+FROM example_products ex_pr
+JOIN storages st
+	ON  ex_pr.id_storage = st.id_storage
+WHERE ex_pr.amount <= 10
+ORDER BY vendor_code, amount;
+
+SELECT
+	vendor_code, 
+	color, 
+	amount,
+	10 AS min_needed_amount, 
+	address 
+FROM products_shortage
+WHERE size = "M";
+
+#3 Показать доступные размеры абстрактных товаров
+DROP VIEW IF EXISTS available_sizes;
+CREATE VIEW available_sizes
+AS
+SELECT distinct
+	a.vendor_code,
+    a.category,
+    e.size
+FROM abstract_products a
+JOIN example_products e
+	ON a.vendor_code = e.vendor_code
+ORDER BY a.category, a.vendor_code;
+
+SELECT *
+FROM available_sizes
+WHERE category = "Платья" OR category = "Юбки";
