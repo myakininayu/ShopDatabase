@@ -1,0 +1,1137 @@
+USE clothes_shop;
+SET SQL_SAFE_UPDATES = 0;
+
+#1 Запросы из функциональных требований (15 шт. +)
+# Транзакционные
+#1
+#1 Оформить заказ
+INSERT INTO bookings
+		(date_time, payment_method, id_client, id_employee)
+VALUES  ('2020-09-06 13:45:54', 'карта', 7, 7);
+
+INSERT INTO example_products_to_bookings
+		(id_example_product, id_booking, amount)
+VALUES  (11, 6, 1),
+		 (9, 6, 1);
+
+#2
+#2 Удалить заказ
+DELETE FROM example_products_to_bookings
+WHERE id_booking = 6;
+
+DELETE FROM bookings
+WHERE id_booking = 6;
+
+#3
+#3 Изменить цену на товар
+UPDATE abstract_products 
+SET price = 999
+WHERE vendor_code = 7;
+
+#4
+#4 Изменить график работы указанного работника
+UPDATE schedules_to_employees 
+SET id_schedule = 2
+WHERE id_employee = 1 AND week_day = 2;
+
+#5
+#5 Изменить должность указанного работника
+UPDATE employees 
+SET position = 'Главный менеджер'
+WHERE id_employee = 5;
+
+# Оперативные
+#6
+#6 Добавить товар в заказ
+INSERT INTO example_products_to_bookings
+		(id_example_product, id_booking, amount)
+VALUES  (7, 2, 1),
+		(5, 2, 1);
+
+#7
+#7 Показать товары в заказе
+SELECT
+	 b.id_booking,
+	 a.vendor_code,
+     a.department,
+     a.category,
+     e.size,
+     e.color,
+     a.price,
+	 b.amount
+FROM example_products_to_bookings b
+JOIN example_products e
+	ON e.id_example_product = b.id_example_product
+JOIN abstract_products a
+	ON a.vendor_code = e.vendor_code
+ORDER BY b.amount, b.id_booking, a.vendor_code;
+
+#8
+#8 Удалить товар из заказа
+DELETE FROM example_products_to_bookings
+WHERE id_example_product = 6 AND id_booking = 2;
+
+#9
+#9 Показать, какие цвета пиджаков есть в наличии
+SELECT DISTINCT
+	a.vendor_code,
+    a.category,
+    e.color
+FROM abstract_products a
+JOIN example_products e
+	ON a.vendor_code = e.vendor_code
+WHERE category = "Пиджаки"
+ORDER BY a.vendor_code;
+
+#10
+#10 Показать, какие размеры джинс есть в наличии
+SELECT DISTINCT
+	a.vendor_code,
+    a.category,
+    e.size
+FROM abstract_products a
+JOIN example_products e
+	ON a.vendor_code = e.vendor_code
+WHERE a.category = "Джинсы"
+ORDER BY a.vendor_code;
+
+#11
+#11 Показать бонусы на счету клиента
+SELECT 
+	  cl.name, 
+      cl.phone, 
+      card.current_bonuses_amounts
+FROM  clients cl
+JOIN  discount_cards card
+ON 	  cl.id_client = card.id_discount_card
+WHERE name = '"Gena Arrigo"';
+
+# Аналитические
+#12
+#12 Показать самый популярный товар за неделю/месяц год +
+SELECT
+	vendor_code, 
+    price, 
+    category, 
+    model, MAX(sum) AS sum
+FROM (
+	SELECT
+		a.vendor_code, price, category, model, SUM(e_to_b.amount) AS sum
+	FROM bookings b
+    JOIN example_products_to_bookings e_to_b
+		ON b.id_booking = e_to_b.id_booking
+    JOIN example_products e
+		ON e_to_b.id_example_product = e.id_example_product
+    JOIN abstract_products a
+		ON e.vendor_code = a.vendor_code
+	GROUP BY e.vendor_code) AS sum_table
+;
+
+#13
+#13 Показать кол-во товаров каждого вида в наличии на складе/в магазине
+SELECT 
+	 a.vendor_code, 
+	 a.category,
+	 e.size, 
+	 e.color, 
+	 e.amount,
+     a.department,
+	 s.address
+FROM example_products e
+JOIN storages s
+	ON 	s.id_storage = e.id_storage
+JOIN abstract_products a
+	ON 	a.vendor_code = e.vendor_code
+ORDER BY category, vendor_code ASC, amount DESC;
+
+#14
+#14 Рассчитать стоимость товаров в заказе  
+SELECT 
+	b.id_booking, 
+    c.name AS client_name, 
+    b.date_time, 
+    SUM(a.price * e_to_b.amount) AS overall_price
+FROM bookings b
+JOIN example_products_to_bookings e_to_b
+	ON b.id_booking = e_to_b.id_booking
+JOIN example_products e
+	ON e_to_b.id_example_product = e.id_example_product
+JOIN abstract_products a
+	ON a.vendor_code = e.vendor_code
+JOIN clients c
+	ON b.id_client = c.id_client
+GROUP BY b.id_booking;
+
+#15
+#15 Вывести кол-во купленных товаров в заданной категории за заданный период
+SELECT 
+	YEAR(date_time) AS year, 
+	MONTH(date_time) AS month,
+    a.category,
+    SUM(e_to_b.amount) AS products_num
+FROM bookings b
+JOIN example_products_to_bookings e_to_b
+	ON b.id_booking = e_to_b.id_booking
+JOIN example_products e
+	ON e_to_b.id_example_product = e.id_example_product
+JOIN abstract_products a
+	ON a.vendor_code = e.vendor_code
+GROUP BY YEAR(date_time), MONTH(date_time), category;
+
+#16
+#16 Показать кол-во оформленных заказов за текущий месяц 
+SELECT 
+	YEAR(curdate()) AS cur_year, 
+    MONTH(curdate()) AS cur_month, 
+    COUNT(*) AS bookings_num
+FROM   bookings
+WHERE  MONTH(date_time) = MONTH(current_date()) 
+	   AND YEAR(date_time) = YEAR(current_date());
+       
+#17
+#17 Показать средний чек заказа за месяц
+SELECT 
+	YEAR(date_time) AS year, 
+	MONTH(date_time) AS month,
+    ROUND(AVG(overall_price), 0) AS avg_booking_price
+FROM (
+	SELECT 
+		b.id_booking, 
+        b.date_time, 
+        SUM(a.price) AS overall_price
+	FROM bookings b
+	JOIN example_products_to_bookings e_to_b
+		ON b.id_booking = e_to_b.id_booking
+	JOIN example_products e
+		ON e_to_b.id_example_product = e.id_example_product
+	JOIN abstract_products a
+		ON a.vendor_code = e.vendor_code
+	GROUP BY b.id_booking) AS tmp_table
+GROUP BY YEAR(date_time), MONTH(date_time)
+ORDER BY date_time;
+
+# Плановые
+#18
+#18 Найти склад/магазин, где экземпляров каждого товара меньше необходимого минимума
+SELECT 
+	e.vendor_code, 
+	e.color, 
+	e.size,
+    e.amount,
+	10 AS min_needed_amount, 
+	s.address 
+FROM example_products e
+JOIN storages s
+	ON  e.id_storage = s.id_storage
+WHERE e.amount <= 10
+ORDER BY vendor_code;
+
+##########################################################################################
+#2.UPDATE в разных таблицах, с WHERE, можно условно, например, изменить заранее созданные некорректные данные (5 шт.)
+#19
+#1 Увеличить з/п работникам, у которых з/п меньше 20 000, а время начала работы до 2020 года
+UPDATE employees 
+SET salary = salary + 750
+WHERE salary < 20000 AND hiring_time < "2020-01-01"
+LIMIT 20;
+
+#20
+#2 Добавить бонусов на счет клиентов в честь юбилея магазина
+UPDATE discount_cards 
+SET current_bonuses_amounts = current_bonuses_amounts + 500
+LIMIT 1000;
+
+#21
+#3 Изменить язык для черного цвета
+UPDATE example_products
+SET color = "black" 
+WHERE color = "черный"
+LIMIT 2; 
+
+#22
+#4 Увеличить цену для наиболее качественных товаров
+UPDATE abstract_products
+SET price = price + 200 
+WHERE rating >= 4.8;
+
+#23
+#5 Увеличить цену товаров из денима из мужского отдела
+UPDATE abstract_products
+SET price = price + 200 
+WHERE department = "мужской" AND material = "Деним";
+
+#24
+#6 Перенести все сегодняшние доставки на след.день
+UPDATE deliveries 
+SET date = DATE_ADD(date, INTERVAL 1 DAY)
+WHERE date = curdate();
+
+##########################################################################################
+#3 DELETE в разных таблицах, с WHERE, можно условно, например, удалить заранее созданные некорректные данные (5 шт.)
+#25
+#1 Удалить все товары модели Mom
+DELETE FROM abstract_products 
+WHERE model = "Mom";
+
+#26
+#2 Удалить информацию о несовершеннолетних клиентах
+DELETE FROM clients 
+WHERE age <= 18;
+
+#27
+#3 Уволить определенного сотрудника
+DELETE FROM employees 
+WHERE name = "Павлова Александра";
+
+#28
+#4 Удалить товары с низким рейтингом
+DELETE FROM abstract_products 
+WHERE rating < 4;
+
+#29
+#5 Убрать инф-цию о магазине по определенному адресу
+DELETE FROM storages 
+WHERE address = "Библиотечная, 9";
+
+###########################################################################################
+/*4.SELECT, DISTINCT, WHERE, AND/OR/NOT, IN, BETWEEN, различная работа с датами и числами,
+ преобразование данных, IS NULL, AS для таблиц и столбцов и др. в различных вариациях (20 шт. +) */
+#30
+#1
+SELECT name AS brand_name, country 
+FROM brands 
+WHERE year_of_foundation >= 1970;
+
+#31
+#2
+SELECT name AS client_name, phone
+FROM clients
+WHERE age >= 30 AND gender = 'женский';
+
+#32
+#3
+SELECT name, position, salary
+FROM employees 
+WHERE salary BETWEEN 20000 AND 30000;
+
+#33
+#4
+SELECT name AS employee_name, position, hiring_time 
+FROM employees 
+WHERE year(hiring_time) IN (2020, 2021)
+ORDER BY hiring_time DESC;
+
+#34
+#5 Показать имеющиеся модели женских джинс вне зависимости от цены, бренда и т.д.
+SELECT DISTINCT vendor_code, model
+FROM abstract_products
+WHERE category = "Джинсы" AND department = "женский";
+
+#35
+#6 Показать, в каких размерах может быть определенный товар
+SELECT DISTINCT vendor_code, size
+FROM example_products
+ORDER BY vendor_code;
+
+#36
+#7
+SELECT name, country
+FROM brands
+WHERE country = 'Испания' OR  country = 'Италия';
+
+#37
+#8
+SELECT name, position, salary, education
+FROM employees
+WHERE position =  'Продавец-консультант' AND  education =  'высшее';
+
+#38
+#9 Вывести инф-ю о датах и времени заказов, которые оплачивались не наличными
+SELECT id_booking, date_time
+FROM bookings
+WHERE NOT payment_method = 'наличные';
+
+#39
+#10 Вывести инф-ю о платных доставках в феврале месяце
+SELECT id_delivery, date, address
+FROM deliveries 
+WHERE MONTH(date) = 2 AND NOT price = 0;
+
+#40
+#11 Вывести инф-ю о доставках по адресу Еременко,56
+SELECT id_delivery, date
+FROM deliveries
+WHERE address = 'Еременко,56';
+
+#41
+#12 Вывести товары из денима с ценой менее 3000
+SELECT vendor_code, price, category, model, department
+FROM abstract_products
+WHERE material = 'Деним' AND price < 3000;
+
+#42
+#13 Вывести адреса, принадлежащие магазинам
+SELECT address
+FROM storages
+WHERE type = 'магазин';
+
+#43
+#14 Показать товары с высоким рейтингом
+SELECT vendor_code, price, category, model, department
+FROM abstract_products
+WHERE rating BETWEEN 4.8 AND 5;
+
+#44
+#15 Показать все доступные цвета товара размера M
+SELECT vendor_code, color, amount
+FROM example_products
+WHERE size = "M";
+
+#45
+#16 Показать всех клиентов мужского пола в возрасте от 25 до 35
+SELECT name, phone
+FROM clients
+WHERE gender = "мужской" AND age BETWEEN 25 AND 35;
+
+#46
+#17 Показать, сколько приблизительно зарабатывает каждый сотрудник в неделю
+SELECT name, CONVERT(salary,float)/4 AS week_salary
+FROM employees;
+
+#47
+#18 Показать в виде строки, в какой месяц был оформлен заказ
+SELECT id_booking, MONTHNAME(date_time) AS month
+FROM bookings;
+
+#48
+#19 Показать номер календарной недели, когда был оформлен заказ
+SELECT id_booking, WEEKOFYEAR(date_time) AS week_num, YEAR(date_time)
+FROM bookings
+ORDER BY date_time, week_num;
+
+#49
+#20 Вычислить, сколько лет существует каждый бренд
+SELECT name, YEAR(curdate()) - year_of_foundation AS age
+FROM brands
+ORDER BY year_of_foundation DESC;
+
+###########################################################################################
+#5 LIKE и другая работа со строками (5-7 шт.+)
+#50
+#1 Показать ФИО и номер клиента, у которого номер X-905-XXX-XX-XX
+SELECT name AS client_name, phone
+FROM clients
+WHERE phone LIKE '_905%';
+
+#51
+#2 Вывести инф-ю о доставках по ул.Лавочкина
+SELECT id_delivery, date, address
+FROM deliveries
+WHERE address LIKE 'Лавочкина%';
+
+#52
+#3 Вывести инф-ю о работниках, в ФИО которых есть буквосочетание "ова", но ФИО не начинается на "Кар"
+SELECT name AS employee_name, position, salary
+FROM employees
+WHERE (name NOT LIKE 'Кар%' AND name LIKE CONCAT('%', 'ова ', '%'));
+
+#53
+#4 Получить инф-ю о брендах, их основателях и времени основания
+SELECT
+	CONCAT_WS(' ', f.name, 'основал бренд', br.name, 'в', br.year_of_foundation , 'году') AS brand_info
+FROM brands_to_founders br_to_f
+JOIN founders f
+	ON f.id_founder = br_to_f.id_founder
+JOIN brands br
+	ON br.id_brand = br_to_f.id_brand;
+
+#54
+#5 Показать бонусы на счету клиента в строковом варианте
+SELECT 
+	CONCAT('На счету клиента с ФИО "', client.name, '" ', card.current_bonuses_amounts, ' бонусов') AS bonuses_info
+FROM clients client
+JOIN discount_cards card
+  ON client.id_client = card.id_discount_card;
+
+#55
+#6 SELECT INTO или INSERT SELECT, что поддерживается СУБД (2-3 шт.)
+#1 Скопировать содержимое таблицы клиентов
+INSERT INTO new_clients
+SELECT *
+FROM clients
+WHERE age >= 18; 
+
+#56
+#2 Скопировать информацию из таблиц bookings, clients и employees
+INSERT INTO all_info_bookings
+SELECT b.id_booking, b.date_time, b.payment_method, cl.name AS client_name, cl.phone AS client_phone, empl.name AS employee_name 
+FROM bookings b
+JOIN clients cl 
+	ON b.id_client = cl.id_client
+JOIN employees empl 
+	ON b.id_employee = empl.id_employee;
+
+#57
+#3 Скопировать информацию о брендах и их основателях
+INSERT INTO all_info_brands
+	(brand_name, founder_name, year_of_foundation, country)
+SELECT 
+	br.name AS brand_name, 
+    f.name AS founder_name, 
+	br.year_of_foundation AS year_of_foundation, 
+    br.country AS country
+FROM brands_to_founders br_to_f
+JOIN founders f
+	ON f.id_founder = br_to_f.id_founder
+JOIN brands br
+	ON br.id_brand = br_to_f.id_brand;
+    
+    
+###########################################################################################
+/*7 JOIN: INNER, OUTER (LEFT, RIGHT, FULL), CROSS, NATURAL, разных, 
+несколько запросов с более, чем одним JOIN (20 шт.+) */ 
+#58
+#1 Показать, каким брендам принадлежат имеющиеся товары
+SELECT abs_pr.vendor_code, abs_pr.category, abs_pr.model, br.name
+FROM abstract_products abs_pr
+LEFT JOIN brands br
+	ON abs_pr.id_brand = br.id_brand;
+  
+#59
+#2 Показать, какие категории вещей имеются в продаже в магазине от конкретного бренда
+SELECT DISTINCT br.name, abs_pr.category
+FROM abstract_products abs_pr
+RIGHT JOIN brands br
+	ON abs_pr.id_brand = br.id_brand;
+
+#60
+#3 Показать инф-ю по доставкам
+SELECT b.id_booking, b.payment_method, d.address
+FROM bookings b
+LEFT JOIN deliveries d
+	ON b.id_booking = d.id_delivery;
+
+#61
+#4 Показать, как чаще всего расплачивается каждый клиент
+SELECT c.name, b.payment_method, count(b.payment_method) AS num_of_payments
+FROM bookings b
+INNER JOIN clients c
+	ON b.id_client = c.id_client
+GROUP BY c.name, b.payment_method;   
+  
+#62
+#5 Показать инф-ю о компонентах
+SELECT 
+	abs_pr.vendor_code,
+    abs_pr.category,
+    c.name,
+    pr_to_c.`%`
+FROM products_to_components pr_to_c
+JOIN components c
+	ON pr_to_c.id_component = c.id_component
+JOIN abstract_products abs_pr
+	ON pr_to_c.id_product = abs_pr.vendor_code;
+    
+#63
+#6 Показать инф-ю о кол-ве товаров на складах
+SELECT 
+	a.vendor_code,
+    a.category,
+    sum(e.amount) AS amount,
+    s.address
+FROM abstract_products a
+JOIN example_products e
+	ON a.vendor_code = e.vendor_code
+JOIN storages s
+	ON e.id_storage = s.id_storage
+GROUP BY vendor_code
+ORDER BY vendor_code;
+  
+#64
+#7 Узнать дату регистрации клиента в системе
+SELECT c.name, d.date
+FROM clients c
+INNER JOIN discount_cards d
+	ON c.id_client = d.id_discount_card
+ORDER BY d.date;
+
+#65
+#8 На каких складах находится одежда определенных брендов
+SELECT 
+	b.name,
+    s.address
+FROM brands b
+JOIN abstract_products a
+	ON b.id_brand = a.id_brand
+JOIN example_products e
+	ON a.vendor_code = e.vendor_code
+JOIN storages s
+	ON e.id_storage = s.id_storage
+    ORDER BY b.name;
+ 
+#66
+#9 Показать сотрудника, обслуживавшего в определенное время каждый заказ
+SELECT 
+	b.id_booking, e.name, b.date_time
+FROM bookings b
+JOIN employees e
+	ON b.id_employee = e.id_employee;
+ 
+#67
+#10 Показать сотрудника и день недели, когда был оформлен каждый заказ
+SELECT 
+	b.id_booking, e.name, 
+    dayofweek(b.date_time) AS week_day, 
+    time(b.date_time) AS time
+FROM bookings b
+JOIN employees e
+	ON b.id_employee = e.id_employee;
+
+#68
+#11 Узнать среднюю цену на товары каждого бренда
+SELECT 
+	b.name,
+    ROUND(AVG(price), 1) AS avg_price
+FROM brands b
+JOIN abstract_products a
+	ON b.id_brand = a.id_brand
+GROUP BY b.name
+ORDER BY b.name;
+
+#69
+#12 Показать все возможные цвета товаров(через декартово произведение)
+SELECT DISTINCT a.category, e.color
+FROM abstract_products a
+CROSS JOIN example_products e
+	ON a.vendor_code = e.vendor_code
+ORDER BY category;
+
+#70
+#13 Показать все возможные цвета джинс и рубашек(через natural join)
+SELECT DISTINCT a.category, e.color
+FROM abstract_products a
+NATURAL JOIN example_products e
+WHERE a.category = 'Джинсы' OR a.category = 'Рубашки'
+ORDER BY category;
+
+#71
+#14 Показать, одежда каких брендов будет в доставке
+SELECT 
+	d.id_delivery, 
+    d.address, 
+    br.name, 
+    count(*) AS products_num
+FROM deliveries d
+JOIN bookings b
+	ON d.id_delivery = b.id_booking 
+JOIN example_products_to_bookings e_to_b
+	ON b.id_booking = e_to_b.id_booking
+JOIN example_products e
+	ON e.id_example_product = e_to_b.id_example_product
+JOIN abstract_products a
+    ON e.vendor_code = a.vendor_code
+JOIN brands br
+    ON br.id_brand = a.id_brand
+GROUP BY id_delivery, d.address, br.name;
+
+#72
+#15 Показать, кому из клиентов предназначена доставка
+SELECT 
+	d.address, 
+	d.date, 
+	c.name
+FROM deliveries d
+JOIN bookings b
+	ON d.id_delivery = b.id_booking
+JOIN clients c
+	ON c.id_client = b.id_client;
+    
+#73
+#16 Узнать, по какому адресу в магазине/на складе работал сотрудник, когда оформлял заказ
+SELECT DISTINCT 
+	em.name AS employee_name, 
+    date(b.date_time) AS date, 
+    s.address
+FROM employees em
+JOIN bookings b
+	ON em.id_employee = b.id_employee
+JOIN example_products_to_bookings ex_to_b
+	ON b.id_booking = ex_to_b.id_booking
+JOIN example_products ex
+	ON ex_to_b.id_example_product = ex.id_example_product
+JOIN storages s
+	ON ex.id_storage = s.id_storage;
+  
+#74
+#17 Показать, из каких компонентов состоят товары каждого бренда
+SELECT br.name AS brand, c.name AS component
+FROM brands br
+JOIN abstract_products a
+	ON br.id_brand = a.id_brand
+JOIN products_to_components pr_to_c
+	ON a.vendor_code = pr_to_c.id_product
+JOIN components c
+	ON pr_to_c.id_component = c.id_component
+ORDER BY br.name ASC;
+
+#75
+#18 Показать, из каких материалов сделаны товары каждого бренда
+SELECT br.name, a.material
+FROM brands br
+JOIN abstract_products a
+	ON br.id_brand = a.id_brand
+ORDER BY br.name;
+
+#76
+#19 Узнать, по какому адресу в магазине/на складе клиент оформлял заказ
+SELECT DISTINCT 
+	c.name, 
+    date(b.date_time) AS date, 
+    s.address
+FROM clients c
+JOIN bookings b
+	ON c.id_client = b.id_client
+JOIN example_products_to_bookings ex_to_b
+	ON b.id_booking = ex_to_b.id_booking
+JOIN example_products ex
+	ON ex_to_b.id_example_product = ex.id_example_product
+JOIN storages s
+	ON ex.id_storage = s.id_storage;
+  
+#77
+#20 Показать, одежду каких брендов покупает клиент
+SELECT DISTINCT 
+	c.name AS client_name, 
+    br.name AS brand_name
+FROM clients c
+JOIN bookings b
+	ON c.id_client = b.id_client
+JOIN example_products_to_bookings ex_to_b
+	ON b.id_booking = ex_to_b.id_booking
+JOIN example_products ex
+	ON ex_to_b.id_example_product = ex.id_example_product
+JOIN abstract_products a
+	ON ex.vendor_code = a.vendor_code
+JOIN brands br
+    ON a.id_brand = br.id_brand
+ORDER BY c.name;
+
+
+###########################################################################################
+#8 GROUP BY (некоторые с HAVING), ORDER BY (ASC|DESC) вместе с COUNT, MAX, MIN, SUM, AVG 20+
+#78
+#1 Найти сумму товаров с определенным артикулом по всем складам/магазинам
+SELECT vendor_code, SUM(amount) 
+FROM example_products
+GROUP BY vendor_code;
+
+#79
+#2 Показать, каких цветов может быть каждый абстрактный товар 
+SELECT DISTINCT vendor_code, color
+FROM example_products
+ORDER BY vendor_code;
+
+#80
+#3 Показать, сколько работников компании работают на определенной должности
+SELECT position, COUNT(name) AS num_of_empl
+FROM employees
+GROUP BY position
+ORDER BY num_of_empl;
+
+#81
+#4 Показать, сколько денег нужно заплатить всем сотрудникам компании
+SELECT SUM(salary) AS salary_costs
+FROM employees;
+
+#82
+#5 Показать средний возраст клиентов
+SELECT ROUND(AVG(age), 2) AS avg_client_age
+FROM clients;
+
+#83
+#6 Показать, сколько сотрудников наняли в определенный год
+SELECT year(hiring_time) AS year_of_hiring, COUNT(name) AS empl_count
+FROM employees
+GROUP BY year_of_hiring;
+
+#84
+#7 Показать, сколько брендов основали до 1955 года
+SELECT count(*) AS num_of_brands
+FROM brands
+WHERE year_of_foundation < 1955;
+
+#85
+#8 Показать, сколько складов и магазинов принадлежит компании 
+SELECT type, count(type) AS num
+FROM storages
+GROUP BY type
+ORDER BY num;
+
+#86
+#9 Рассчитать средний рейтинг товаров
+SELECT ROUND(AVG(rating), 4) AS avg_rating
+FROM abstract_products;
+
+#87
+#10 Показать среднюю стоимость товаров определенных категорий
+SELECT category, ROUND(AVG(price), 2) AS avg_price
+FROM abstract_products
+GROUP BY category
+HAVING category = "Джинсы" OR category = "Рубашки";
+
+#88
+#11 Найти самую непопулярную модель из категории "Джинсы"
+SELECT category, model, min(rating)
+FROM abstract_products
+GROUP BY category
+HAVING category = "Джинсы";
+
+#89
+#12 Показать минимальную стоимость товаров для женского отдела
+SELECT category, ROUND(MIN(price), 2) AS min_price, department
+FROM abstract_products
+GROUP BY category
+HAVING department = "женский";
+
+#90
+#13 Показать кол-во заказов в день за последний месяц
+SELECT date(date_time) AS date, count(*) AS bookings_num
+FROM bookings
+GROUP BY date(date)
+HAVING 
+	MONTH(date) = MONTH(curtime()) AND
+	YEAR(date) = YEAR(curtime())
+ORDER BY date_time DESC;
+
+#91
+#14 Показать среднюю цену товаров в мужском и женском отделах
+SELECT ROUND(AVG(price), 2) AS avg_price, department
+FROM abstract_products
+GROUP BY department;
+
+#92
+#15 Показать максимальную цену товаров из определенного материала и категории
+SELECT max(price) AS max_price, category, material
+FROM abstract_products
+GROUP BY category, material;
+
+#93
+#16 Показать доступные размеры абстрактных товаров
+SELECT DISTINCT vendor_code, size
+FROM example_products
+ORDER BY vendor_code;
+
+#94
+#17 Показать минимальное кол-во экземпляра товара для каждого абстрактного товара
+SELECT DISTINCT vendor_code, color, size, min(amount) AS min_amount
+FROM example_products
+GROUP BY vendor_code
+HAVING min_amount < 10;
+
+#95
+#18 Показать кол-во сотрудников, работающих в определенную смену в определенный день недели
+SELECT id_schedule, count(id_employee) num_employees, week_day
+FROM schedules_to_employees
+GROUP BY id_schedule, week_day;
+
+#96
+#19 Показать кол-во товаров в заказе
+SELECT id_booking, sum(amount) AS product_num
+FROM example_products_to_bookings
+GROUP BY id_booking
+ORDER BY id_booking DESC;
+
+#97
+#20 Показать, сколько заказов оформил каждый сотрудник
+SELECT id_employee, count(*) AS booking_num
+FROM bookings
+GROUP BY id_employee
+ORDER BY id_booking DESC;
+
+#98
+#21 Показать, сколько заказов оплатил каждый клиент
+SELECT clients.name, count(*) AS booking_num
+FROM bookings
+join clients ON bookings.id_client = clients.id_client
+GROUP BY bookings.id_client
+ORDER BY id_booking DESC;
+
+#99
+#22 Вычислить среднюю з/п женщин и мужчин
+SELECT gender, ROUND(AVG(salary), 1) AS avg_salary
+FROM employees
+GROUP BY gender;
+
+###########################################################################################
+#9 UNION, EXCEPT, INTERSECT, что поддерживается СУБД (3-5 шт.)
+#100
+#1 Показать инф-ю по товарам и их брендам
+(SELECT 
+    abs_pr.category, 
+    abs_pr.model, 
+    abs_pr.vendor_code,
+    abs_pr.rating,
+    abs_pr.price,
+    br.name
+FROM abstract_products abs_pr
+LEFT JOIN brands br
+	ON abs_pr.id_brand = br.id_brand
+WHERE category = "Пальто")
+    UNION
+(SELECT 
+    abs_pr.category, 
+    abs_pr.model, 
+    abs_pr.vendor_code, 
+    abs_pr.rating,
+	abs_pr.price,
+    br.name
+FROM abstract_products abs_pr
+RIGHT JOIN brands br
+	ON abs_pr.id_brand = br.id_brand
+WHERE category = "Пальто")
+ORDER BY model, rating, price DESC;
+
+#101
+#2 Показать инф-ю по графикам работы сотрудников
+(SELECT 
+    e.name,
+    e.position,
+    sh_to_e.week_day,
+    sh.start_time,
+    sh.end_time
+FROM
+    schedules_to_employees sh_to_e
+LEFT JOIN employees e 
+	ON sh_to_e.id_employee = e.id_employee
+RIGHT JOIN schedules sh 
+	ON sh_to_e.id_schedule = sh.id_schedule) 
+UNION 
+(SELECT 
+    e.name,
+    e.position,
+    sh_to_e.week_day,
+    sh.start_time,
+    sh.end_time
+FROM schedules_to_employees sh_to_e
+RIGHT JOIN employees e 
+	ON sh_to_e.id_employee = e.id_employee
+LEFT JOIN schedules sh 
+    ON sh_to_e.id_schedule = sh.id_schedule) 
+ORDER BY position , name , week_day;
+
+#102
+#3 Показать инф-ю по товарам и их компонентам
+(SELECT 
+	abs_pr.vendor_code,
+    c.name,
+    pr_to_c.`%`
+FROM products_to_components pr_to_c
+LEFT JOIN components c
+	ON pr_to_c.id_component = c.id_component
+RIGHT JOIN abstract_products abs_pr
+	ON pr_to_c.id_product = abs_pr.vendor_code
+)
+    UNION 
+(SELECT 
+	abs_pr.vendor_code,
+    c.name,
+    pr_to_c.`%`
+FROM products_to_components pr_to_c
+RIGHT JOIN components c
+	ON pr_to_c.id_component = c.id_component
+LEFT JOIN abstract_products abs_pr
+	ON pr_to_c.id_product = abs_pr.vendor_code
+)
+ORDER BY vendor_code, `%`;
+
+
+###########################################################################################
+#10 Вложенные SELECT с ALL, ANY, EXISTS (3-5 шт.)
+#103
+#1 Найти самый дорогой товар в каждой категории
+SELECT category, price
+FROM abstract_products abs_pr_1
+WHERE abs_pr_1.price>ALL(
+                      SELECT abs_pr_2.price
+                      FROM abstract_products abs_pr_2
+                      WHERE abs_pr_2.category = abs_pr_1.category
+                        AND abs_pr_2.vendor_code<>abs_pr_1.vendor_code -- чтобы исключить сравнение со своей же ЗП
+                        AND abs_pr_2.price IS NOT NULL -- исключить NULL значения
+                    );
+
+#104
+#2 Показать категории товаров, которых не менее 20 штук хотя бы в одном конкретном экземпляре
+SELECT category
+FROM abstract_products
+WHERE vendor_code = ANY
+  (SELECT vendor_code
+  FROM example_products
+  WHERE amount >= 20
+  );
+
+#105
+#3 Показать экземпляры товаров, привязанные к артикулу
+SELECT
+	e.vendor_code, 
+    e.color, 
+    e.size, 
+    e.amount
+FROM example_products e
+WHERE EXISTS
+			(SELECT * 
+            FROM abstract_products a 
+            WHERE a.vendor_code = e.vendor_code);
+
+
+###########################################################################################
+#11 GROUP_CONCAT и другие разнообразные функции SQL (2-3 шт.)
+#106
+#1 Вывести фамилии всех менеджеров
+SELECT GROUP_CONCAT(name) 
+FROM employees
+WHERE position = 'Менеджер';
+
+#107
+#2 Вывести названия всех брендов, основанных за последние полвека, одежда которых проедается в магазине
+SELECT GROUP_CONCAT(name SEPARATOR '; ') AS brands_names
+FROM brands
+WHERE YEAR(curdate()) - year_of_foundation <= 50;
+
+
+###########################################################################################
+/*12 Сложные запросы, входящие в большинство групп выше, т.е. SELECT ... JOIN ... JOIN ... 
+WHERE ... GROUP BY ... ORDER BY ... LIMIT ...; (5-7 шт. +) */
+#108
+#1 Найти склад/магазин, где экземляров каждого товара размера М меньше необходимого минимума
+SELECT 
+	ex_pr.vendor_code, 
+	ex_pr.color, 
+	ex_pr.size,
+    ex_pr.amount,
+	10 AS min_needed_amount, 
+	st.address 
+FROM example_products ex_pr
+JOIN storages st
+	ON  ex_pr.id_storage = st.id_storage
+WHERE ex_pr.amount <= 10 AND ex_pr.size = "M"
+ORDER BY vendor_code, amount;
+
+#109
+#2 Найти склад/магазин, где к.-л. экземляра каждого товара меньше всего
+SELECT 
+	ex_pr.vendor_code, 
+	ex_pr.color, 
+	ex_pr.size,
+	MIN(ex_pr.amount) AS available_amount, 
+	st.address 
+FROM example_products ex_pr
+JOIN storages st
+	ON ex_pr.id_storage = st.id_storage
+GROUP BY vendor_code;
+
+#110
+#3 Узнать кол-во вещей черного или белого цвета в наличии
+SELECT 
+	a.vendor_code, 
+    a.category, 
+    a.rating, 
+	e.size, 
+    e.color, 
+    e.amount
+FROM abstract_products a
+JOIN example_products e
+	ON   a.vendor_code = e.vendor_code 
+WHERE e.color = 'черный' OR e.color = 'белый';
+        
+#111
+#4 Узнать, кто из сотрудников выходит на опр.смену в опр. день недели
+SELECT
+	wd.week_day, sh.start_time, sh.end_time, empl.name, empl.position
+FROM schedules_to_employees wd
+JOIN schedules sh
+	ON wd.id_schedule = sh.id_schedule
+JOIN  employees empl
+	ON empl.id_employee = wd.id_employee
+ORDER BY wd.week_day, sh.start_time, sh.end_time, empl.name;
+
+#112
+#5 Узнать, сколько сотрудников выходят на смену в определенный день недели
+SELECT 
+	sh_to_em.week_day, 
+    sh.start_time, 
+    sh.end_time, 
+    COUNT(sh_to_em.id_employee) AS employee_num
+FROM schedules_to_employees sh_to_em
+JOIN schedules sh
+	ON sh_to_em.id_schedule = sh.id_schedule
+GROUP BY sh_to_em.week_day, 
+		 sh.start_time, 
+		 sh.end_time
+ORDER BY sh_to_em.week_day, 
+		 sh.start_time, 
+		 sh.end_time
+LIMIT 100;
+
+/* МОДИФИКАЦИЯ
+1.Вывести сотрудника, который больше всего продал товаров за опр.промежуток времени
+2.Вывести для заданного продукта всю инф-ю по экземплярам, бренду и компонентам
+3.Вывести среднее значение каждого компонента в товарах опред.категории
+
+*/
+#1 Вывести сотрудника, который больше всего продал товаров за опр.промежуток времени(год)
+SELECT
+	employee_name, MAX(sold_amount)
+FROM
+(SELECT DISTINCT 
+	em.name AS employee_name, 
+    sum(ex_to_b.amount * a.price) AS sold_amount
+FROM employees em
+JOIN bookings b
+	ON em.id_employee = b.id_employee
+JOIN example_products_to_bookings ex_to_b
+	ON b.id_booking = ex_to_b.id_booking
+JOIN example_products ex
+	ON ex_to_b.id_example_product = ex.id_example_product
+JOIN abstract_products a
+	ON a.vendor_code = ex.vendor_code
+GROUP BY employee_name, YEAR(date_time)) AS employees_work_res;
+
+#2.Вывести для заданного продукта всю инф-ю по экземлярам, бренду и компонентам
+SELECT
+	a.vendor_code,
+    a.price,
+    a.category,
+    a.department,
+    br.name,
+    a.model,
+    a.rating,
+    a.material,
+    c.name,
+    pr_to_c.`%`,
+    e.size,
+    e.color,
+    s.address AS storage_addr,
+    s.type AS storage_type
+FROM abstract_products a
+JOIN example_products e
+	ON a.vendor_code = e.vendor_code
+JOIN storages s
+	ON s.id_storage = e.id_storage
+JOIN products_to_components pr_to_c
+	ON a.vendor_code = pr_to_c.id_product
+JOIN components c
+	ON pr_to_c.id_component = c.id_component
+JOIN brands br
+	ON br.id_brand = a.id_brand
+WHERE a.vendor_code = 2 AND s.type = "магазин";
+
+#3.Вывести среднее значение каждого компонента в товарах опред.категории
+SELECT
+	a.category, c.name, ROUND(AVG(pr_to_c.`%`), 2) AS `avg_%`
+FROM abstract_products a
+JOIN products_to_components pr_to_c
+	ON a.vendor_code = pr_to_c.id_product
+JOIN components c
+	ON pr_to_c.id_component = c.id_component
+GROUP BY a.category, c.name
+ORDER BY a.category;
