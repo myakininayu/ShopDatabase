@@ -1,0 +1,215 @@
+# Процедуры
+#1 Вывести полную инф-ю о товаре
+DROP PROCEDURE IF EXISTS get_aLL_product_info;
+DELIMITER $$
+CREATE PROCEDURE get_aLL_product_info(IN vendor_code INT)
+BEGIN
+	SELECT
+	a.vendor_code,
+    a.price,
+    a.category,
+    a.department,
+    br.name,
+    a.model,
+    a.rating,
+    a.material,
+    c.name,
+    pr_to_c.`%`,
+    e.size,
+    e.color,
+    e.amount,
+    IF(e.amount > 10, 'Много товара', 'Мало товара') AS if_res,
+    s.address AS storage_addr,
+    s.type AS storage_type
+FROM abstract_products a
+JOIN example_products e
+	ON a.vendor_code = e.vendor_code
+JOIN storages s
+	ON s.id_storage = e.id_storage
+JOIN products_to_components pr_to_c
+	ON a.vendor_code = pr_to_c.id_product
+JOIN components c
+	ON pr_to_c.id_component = c.id_component
+JOIN brands br
+	ON br.id_brand = a.id_brand
+WHERE a.vendor_code = vendor_code;   
+END$$
+DELIMITER ;
+CALL get_aLL_product_info(2);
+
+#2 Рассчитать стоимость товаров в определенном заказе вместе с доставкой
+DROP PROCEDURE IF EXISTS get_booking_price;
+DELIMITER $$
+CREATE PROCEDURE get_booking_price(IN id_booking INT)
+BEGIN
+
+DECLARE finished INTEGER DEFAULT 0;
+DECLARE delivery_id INT DEFAULT 0;
+DECLARE delivery_price INT DEFAULT 0;
+
+-- Получить цену доставки
+-- Объявить курсор для delivery
+DEClARE cur_delivery_info
+	CURSOR FOR 
+		SELECT id_delivery, price FROM deliveries;
+
+-- Объявить NOT FOUND handler
+DECLARE CONTINUE HANDLER 
+	FOR NOT FOUND SET finished = 1;
+
+OPEN cur_delivery_info;
+
+get_delivery_price: LOOP
+	FETCH cur_delivery_info INTO delivery_id, delivery_price;
+    
+    IF(delivery_id = id_booking) THEN
+    SET finished = 1;
+    END IF;
+    
+	IF finished = 1 THEN 
+	LEAVE get_delivery_price;
+	END IF;
+    
+END LOOP get_delivery_price;
+CLOSE cur_delivery_info;
+
+SELECT
+	b.id_booking, 
+	c.name AS client_name, 
+	b.date_time, 
+    SUM(a.price * e_to_b.amount) AS booking_price,
+    delivery_price,
+    SUM(a.price * e_to_b.amount) + delivery_price AS overall_price
+FROM bookings b
+JOIN example_products_to_bookings e_to_b
+	ON b.id_booking = e_to_b.id_booking
+JOIN example_products e
+	ON e_to_b.id_example_product = e.id_example_product
+JOIN abstract_products a
+	ON a.vendor_code = e.vendor_code
+JOIN clients c
+	ON b.id_client = c.id_client
+JOIN deliveries d
+	ON b.id_booking = d.id_delivery
+WHERE b.id_booking = id_booking;
+ 
+END$$
+DELIMITER ;
+CALL get_booking_price(2);
+
+#3 Вывести кол-во заказов за определенный месяц
+DROP PROCEDURE IF EXISTS get_bookings_num;
+DELIMITER $$
+CREATE PROCEDURE get_bookings_num(IN `year` YEAR, IN `month` INT)
+BEGIN
+	SELECT 
+	`year`, `month`,
+    COUNT(*) AS bookings_num,
+    CASE
+    WHEN COUNT(*) = 0 THEN 'Не было оформлено ни одного заказа'
+    WHEN COUNT(*) > 10 AND COUNT(*) <= 50 THEN 'Было оформлено мало заказов'
+    WHEN COUNT(*) > 50 AND COUNT(*) <= 100 THEN 'Было оформлено среднее кол-во заказов'
+    ELSE 'Было оформлено много заказов'
+	END AS extra_info
+FROM   bookings
+WHERE  MONTH(date_time) = `month` 
+	   AND YEAR(date_time) = `year`;   
+END$$
+DELIMITER ;
+CALL get_bookings_num(2021, 5);
+
+# Функции
+#1 Найти самый дорогой товар в каждой категории
+DROP FUNCTION IF EXISTS find_most_expensive;
+DELIMITER $$
+CREATE FUNCTION find_most_expensive(category VARCHAR(45))
+RETURNS INT
+DETERMINISTIC	
+READS SQL DATA	
+BEGIN
+
+DECLARE most_exp_price INT;
+SELECT price
+FROM abstract_products a1
+WHERE a1.category = category
+		AND a1.price>ALL(
+                      SELECT a2.price
+                      FROM abstract_products a2
+                      WHERE a2.category = a1.category
+                        AND a2.vendor_code<>a1.vendor_code -- чтобы исключить сравнение со своей же ЗП
+                        AND a2.price IS NOT NULL -- исключить NULL значения
+                    ) 
+INTO most_exp_price;
+                    
+RETURN (most_exp_price);
+END $$
+DELIMITER ;	
+
+SELECT DISTINCT category, find_most_expensive(category) AS biggest_price
+FROM abstract_products;
+
+#2 Показать, кому из клиентов предназначена доставка
+DROP FUNCTION IF EXISTS get_delivery_addressee;
+DELIMITER $$
+CREATE FUNCTION get_delivery_addressee(date_time DATETIME, addr VARCHAR(150))
+RETURNS VARCHAR(45)
+DETERMINISTIC
+READS SQL DATA		
+BEGIN
+
+DECLARE client_name VARCHAR(45);
+
+SELECT c.name
+FROM deliveries d
+JOIN bookings b
+	ON d.id_delivery = b.id_booking
+JOIN clients c
+	ON b.id_client = c.id_client
+WHERE d.`date` = date_time AND d.address = addr
+INTO client_name;
+
+RETURN (client_name);
+END $$
+DELIMITER ;	
+
+SELECT DATE(date), address, get_delivery_addressee(date, address) AS client_name
+FROM deliveries
+LIMIT 15; 
+
+
+
+#3 Вывести выручку заданного сотрудника за определенный месяц
+DROP FUNCTION IF EXISTS get_employee_income;
+DELIMITER $$
+CREATE FUNCTION get_employee_income(`year` YEAR, `month` INT, employee_name VARCHAR(45))
+RETURNS INT
+DETERMINISTIC
+READS SQL DATA		
+BEGIN
+DECLARE income INT; 
+
+SELECT DISTINCT
+    sum(ex_to_b.amount * a.price) 
+FROM employees em
+JOIN bookings b
+	ON em.id_employee = b.id_employee
+JOIN example_products_to_bookings ex_to_b
+	ON b.id_booking = ex_to_b.id_booking
+JOIN example_products ex
+	ON ex_to_b.id_example_product = ex.id_example_product
+JOIN abstract_products a
+	ON a.vendor_code = ex.vendor_code
+WHERE em.name = employee_name
+	AND YEAR(b.date_time) = `year`
+	AND MONTH(b.date_time) = `month`
+INTO income;
+
+RETURN (income);
+END $$
+DELIMITER ;	
+
+
+SELECT name, get_employee_income(2021, 2, name) AS money_for_sold_products
+FROM employees
+WHERE NOT ISNULL(get_employee_income(2021, 2, name))
+LIMIT 15;
