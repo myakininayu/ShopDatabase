@@ -1,0 +1,162 @@
+﻿<Window x:Class="db_shop_gui.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
+        xmlns:local="clr-namespace:db_shop_gui"
+        mc:Ignorable="d"
+        Title="Магазин одежды" Height="482" Width="5" MinHeight="513.333" MinWidth="545" MaxHeight="515.333" MaxWidth="600">
+
+    <Grid Background="Lavender">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition/>
+            <ColumnDefinition Width="0*"/>
+        </Grid.ColumnDefinitions>
+        <TabControl Background="Lavender" Margin="0,0,-0.333,0" Grid.ColumnSpan="2" SelectionChanged="TabControl_SelectionChanged">
+            <TabItem Name="analytics" Header="Аналитика">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="113*"/>
+                        <ColumnDefinition Width="109*"/>
+                        <ColumnDefinition Width="309*"/>
+                    </Grid.ColumnDefinitions>
+                    <Label Name="Query14" Content="Рассчитать стоимость заказа" Margin="66.667,5,172.999,415.333" Grid.Column="1" Grid.ColumnSpan="2" />
+                    <Label Name="BookingIDLabel" Content="Введите номер заказа" Margin="43,35,32.666,388.333" Grid.ColumnSpan="2" />
+                    <Button Name="CalcBtn1" Content="Рассчитать" Margin="136.334,37,11.999,388.333"  Background="Lavender" Grid.Column="2" Click="CalcQuery14" IsEnabled="False"/>
+                    <TextBox Name="BookingIDInput" Margin="76.667,37,0,385.333" HorizontalAlignment="Left" Width="158" Grid.Column="1" Grid.ColumnSpan="2" TextChanged="CheckIdBooking" HorizontalContentAlignment="Center"/>
+
+                    <TextBlock Name="Query14Res" Margin="12,75,12,293.333" Grid.ColumnSpan="3" TextAlignment="Center">
+
+                    </TextBlock>
+
+                    <Label Name="YearAnalytics" Content="Месячная аналитика" Margin="91.667,159,181,261.333" HorizontalAlignment="Center" Width="146" Grid.Column="1" Grid.ColumnSpan="2"/>
+                    <TextBox Name="YearInput" Margin="96,195,271,224.333" Grid.ColumnSpan="3" TextChanged="CheckYear" HorizontalContentAlignment="Center"/>
+                    <Label Name="YearLabel" Content="Задайте год:" Margin="12,195,12.333,228.333"  />
+                    <Label Name="MonthLabel" Content="Задайте месяц:" Margin="37.333,195,167,228.333" Grid.Column="2"   />
+
+                    <ComboBox Name="MonthInput" Margin="139.333,195,12,228.333" HorizontalContentAlignment="Center" Grid.Column="2" >
+                        <ComboBoxItem IsSelected="True">Январь</ComboBoxItem>
+                        <ComboBoxItem>Февраль</ComboBoxItem>
+                        <ComboBoxItem>Март</ComboBoxItem>
+                        <ComboBoxItem>Апрель</ComboBoxItem>
+                        <ComboBoxItem>Май</ComboBoxItem>
+                        <ComboBoxItem>Июнь</ComboBoxItem>
+                        <ComboBoxItem>Июль</ComboBoxItem>
+                        <ComboBoxItem>Август</ComboBoxItem>
+                        <ComboBoxItem>Сентябрь</ComboBoxItem>
+                        <ComboBoxItem>Октябрь</ComboBoxItem>
+                        <ComboBoxItem>Ноябрь</ComboBoxItem>
+                        <ComboBoxItem>Декабрь</ComboBoxItem>
+                    </ComboBox>
+
+
+                    <TextBlock Name="Query15" Margin="12,240,42.667,121.333" TextAlignment="Center" TextWrapping="Wrap" Foreground="BlueViolet" Grid.ColumnSpan="2">
+                        Вывести кол-во купленных товаров в заданной категории за заданный месяц
+                    </TextBlock>
+
+                    <Label Name="Category" Content="Выберите категорию" Margin="12,305,44.667,117.333" HorizontalContentAlignment="Center" Grid.ColumnSpan="2"/>
+
+                    <TextBlock Name="Query16" Margin="64.667,240,177,127.333" TextAlignment="Center" TextWrapping="Wrap" Foreground="BlueViolet" Grid.Column="1" Grid.ColumnSpan="2">
+                        Показать кол-во оформленных заказов за заданный месяц
+                    </TextBlock>
+
+                    <TextBlock Name="Query17" Margin="144.333,240,11,120.333" TextAlignment="Center" TextWrapping="Wrap" Foreground="BlueViolet" Grid.Column="2">
+                        Показать средний чек заказа за заданный месяц
+                    </TextBlock>
+
+                    <Button Name="CalcBtn2" Content="Рассчитать" Margin="12,378,44.667,46.333" Background="Lavender" Grid.ColumnSpan="2" Click="CalcQuery15" IsEnabled="False" HorizontalContentAlignment="Center"/>
+                    <Button Name="CalcBtn3" Content="Рассчитать" Margin="74.667,378,181,46.333" Background="Lavender" Grid.Column="1" Grid.ColumnSpan="2" Click="CalcQuery16" IsEnabled="False" HorizontalContentAlignment="Center"/>
+                    <Button Name="CalcBtn4" Content="Рассчитать" Margin="136.333,378,12,46.333" Background="Lavender" Grid.Column="2" Click="CalcQuery17" IsEnabled="False" HorizontalContentAlignment="Center"/>
+
+                    <TextBox Name="Query15Res" Margin="12,415,42.667,8.333" Grid.ColumnSpan="2" HorizontalContentAlignment="Center" IsReadOnly="True"/>
+                    <TextBox Name="Query16Res" Margin="74.667,415,179,7.333" Grid.Column="1" Grid.ColumnSpan="2" HorizontalContentAlignment="Center" IsReadOnly="True"/>
+                    <TextBox Name="Query17Res" Margin="136.333,415,8,8.333" Grid.Column="2" HorizontalContentAlignment="Center" IsReadOnly="True"/>
+
+
+                    <ComboBox Name="CategoryCombo" Margin="12,343,44.667,82.333" HorizontalContentAlignment="Center" Grid.ColumnSpan="2">
+                        <ComboBoxItem IsSelected="True">Джинсы</ComboBoxItem>
+                        <ComboBoxItem>Куртки</ComboBoxItem>
+                        <ComboBoxItem>Пальто</ComboBoxItem>
+                        <ComboBoxItem>Пиджаки</ComboBoxItem>
+                        <ComboBoxItem>Платья</ComboBoxItem>
+                        <ComboBoxItem>Рубашки</ComboBoxItem>
+                        <ComboBoxItem>Свитера</ComboBoxItem>
+                        <ComboBoxItem>Топы</ComboBoxItem>
+                        <ComboBoxItem>Футболки</ComboBoxItem>
+                        <ComboBoxItem>Юбки</ComboBoxItem>
+
+                    </ComboBox>
+                </Grid>
+
+            </TabItem>
+            <TabItem Name="CRUD_abs_pr" Header="Инф-ция о товарах">
+                <Grid>
+                    <Label Margin="22,9,355,409.333">Задайте Артикул товара</Label>
+
+                    <TextBox Name="VCInputAbs" Margin="182,9,179,414.333" TextChanged="CheckVendorAbs" HorizontalContentAlignment="Center"/>
+
+                    <TextBlock Name="AbsPr" Margin="22,46,20,55.333" Background="White" TextAlignment="Center" TextWrapping="Wrap"/>
+
+
+                    <Button Name="CreateBtn1" Content="Создать" Background="Lavender" Margin="288,415,146,10.333" IsEnabled="True" Click="CreateAbstractProductGui" />
+                    <Button Name="ReadBtn1" Content="Получить" Background="Lavender" Margin="22,415,411.667,10.333" Click="GetAllAbstractProducts" IsEnabled="False"/>
+                    <Button Name="UpdateBtn1" Content="Редактировать" Background="Lavender" Margin="156,415,278,10.333" IsEnabled="False" Click="UpdateAbstractProductGui"/>
+                    <Button Name="DeleteBtn1" Content="Удалить" Background="Lavender" Margin="414,415,20,10.333" RenderTransformOrigin="0.305,3.656" IsEnabled="False" Click="DeleteAbstractProductGui"/>
+                </Grid>
+            </TabItem>
+
+
+            <TabItem Name="CRUD_ex_pr" Header="Доп. инф-ция по товарам">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="15*"/>
+                        <ColumnDefinition Width="88*"/>
+                        <ColumnDefinition Width="68*"/>
+                        <ColumnDefinition Width="361*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Label Grid.ColumnSpan="3" Margin="7.333,8,356,410.333" Grid.Column="1">Задайте Артикул товара</Label>
+
+                    <TextBox Name="VCInputEx" Margin="10.333,8,179,414.333" Grid.Column="3" TextChanged="CheckVendorEx" HorizontalContentAlignment="Center"/>
+
+                    <TextBlock Name="ExPr" Grid.ColumnSpan="3" Margin="7.333,46,20,53.333" Background="White" TextAlignment="Center" TextWrapping="Wrap" Grid.Column="1">
+                    </TextBlock>
+
+
+                    <Button Name="ReadBtn2" Content="Получить" Background="Lavender" Margin="7.333,415,51,10.333" Grid.ColumnSpan="2" IsEnabled="False" Click="GetAllExampleProducts" Grid.Column="1"/>
+                    <Button Name="CreateBtn2" Content="Создать" Background="Lavender" Margin="111.333,415,151,10.333" Grid.Column="3" IsEnabled="True" Click="CreateExampleProductGui"/>
+                    <Button Name="UpdateBtn2" Content="Редактировать" Background="Lavender" Margin="49.333,415,281,10.333" Grid.Column="2" Grid.ColumnSpan="2" IsEnabled="False" Click="UpdateExampleProductGui"/>
+                    <Button Name="DeleteBtn2" Content="Удалить" Background="Lavender" Margin="242.333,415,20,10.333" RenderTransformOrigin="0.305,3.656" Grid.Column="3" IsEnabled="False" Click="DeleteExampleProductGui"/>
+
+                </Grid>
+            </TabItem>
+            <TabItem Name="dataWork" Header="Работа с данными">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="219*"/>
+                        <ColumnDefinition Width="313*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox Name="vendor_code" Margin="57.667,77,103,347.333" IsEnabled="False" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Grid.Column="1">Артикул</TextBox>
+                    <TextBox Name="department"  IsEnabled="False" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Margin="106,32,274,392.333" Grid.ColumnSpan="2">Категория</TextBox>
+                    <TextBox Name="category" Margin="106,77,274,347.333" IsEnabled="False" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Grid.ColumnSpan="2">Категория</TextBox>
+                    <TextBox Name="model" Margin="106,125,274,299.333" IsEnabled="False" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Grid.ColumnSpan="2">Модель</TextBox>
+                    <TextBox Name="price" Margin="106,178,274,246.333" IsEnabled="False" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Grid.ColumnSpan="2">Цена</TextBox>
+                    <TextBox Name="rating" Margin="106,229,274,195.333" IsEnabled="False" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Grid.ColumnSpan="2">Рейтинг</TextBox>
+                    <TextBox Name="material" Margin="106,277,274,147.333" IsEnabled="False" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Grid.ColumnSpan="2">Материал</TextBox>
+                    <TextBox Name="brand" Margin="106,336,274,88.333" IsEnabled="False" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Grid.ColumnSpan="2">Бренд</TextBox>
+
+                    <TextBox Name="size" Margin="57.667,125,103,299.333" IsEnabled="False" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Grid.Column="1">Размер</TextBox>
+                    <TextBox Name="color" Margin="57.667,178,103,246.333" IsEnabled="False" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Grid.Column="1">Цвет</TextBox>
+                    <TextBox Name="amount" Margin="57.667,229,103,195.333" IsEnabled="False" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Grid.Column="1" >Количество</TextBox>
+                    <TextBox Name="addr" Margin="57.667,279,103,147.333" IsEnabled="False" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Grid.Column="1">Адрес</TextBox>
+
+                    <Button Name="Save" Background="Lavender" IsEnabled="False" Margin="57.667,336,103,88.333" Grid.Column="1">Сохранить</Button>
+                </Grid>
+
+            </TabItem>
+
+        </TabControl>
+
+    </Grid>
+</Window>
