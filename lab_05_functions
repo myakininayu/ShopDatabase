@@ -117,3 +117,99 @@ WHERE  MONTH(date_time) = `month`
 END$$
 DELIMITER ;
 CALL get_bookings_num(2021, 5);
+
+# Функции
+#1 Найти самый дорогой товар в каждой категории
+DROP FUNCTION IF EXISTS find_most_expensive;
+DELIMITER $$
+CREATE FUNCTION find_most_expensive(category VARCHAR(45))
+RETURNS INT
+DETERMINISTIC	
+READS SQL DATA	
+BEGIN
+
+DECLARE most_exp_price INT;
+SELECT price
+FROM abstract_products a1
+WHERE a1.category = category
+		AND a1.price>ALL(
+                      SELECT a2.price
+                      FROM abstract_products a2
+                      WHERE a2.category = a1.category
+                        AND a2.vendor_code<>a1.vendor_code -- чтобы исключить сравнение со своей же ЗП
+                        AND a2.price IS NOT NULL -- исключить NULL значения
+                    ) 
+INTO most_exp_price;
+                    
+RETURN (most_exp_price);
+END $$
+DELIMITER ;	
+
+SELECT DISTINCT category, find_most_expensive(category) AS biggest_price
+FROM abstract_products;
+
+#2 Показать, кому из клиентов предназначена доставка
+DROP FUNCTION IF EXISTS get_delivery_addressee;
+DELIMITER $$
+CREATE FUNCTION get_delivery_addressee(date_time DATETIME, addr VARCHAR(150))
+RETURNS VARCHAR(45)
+DETERMINISTIC
+READS SQL DATA		
+BEGIN
+
+DECLARE client_name VARCHAR(45);
+
+SELECT c.name
+FROM deliveries d
+JOIN bookings b
+	ON d.id_delivery = b.id_booking
+JOIN clients c
+	ON b.id_client = c.id_client
+WHERE d.`date` = date_time AND d.address = addr
+INTO client_name;
+
+RETURN (client_name);
+END $$
+DELIMITER ;	
+
+SELECT DATE(date), address, get_delivery_addressee(date, address) AS client_name
+FROM deliveries
+LIMIT 15; 
+
+
+
+#3 Вывести выручку заданного сотрудника за определенный месяц
+DROP FUNCTION IF EXISTS get_employee_income;
+DELIMITER $$
+CREATE FUNCTION get_employee_income(`year` YEAR, `month` INT, employee_name VARCHAR(45))
+RETURNS INT
+DETERMINISTIC
+READS SQL DATA		
+BEGIN
+DECLARE income INT; 
+
+SELECT DISTINCT
+    sum(ex_to_b.amount * a.price) 
+FROM employees em
+JOIN bookings b
+	ON em.id_employee = b.id_employee
+JOIN example_products_to_bookings ex_to_b
+	ON b.id_booking = ex_to_b.id_booking
+JOIN example_products ex
+	ON ex_to_b.id_example_product = ex.id_example_product
+JOIN abstract_products a
+	ON a.vendor_code = ex.vendor_code
+WHERE em.name = employee_name
+	AND YEAR(b.date_time) = `year`
+	AND MONTH(b.date_time) = `month`
+INTO income;
+
+RETURN (income);
+END $$
+DELIMITER ;	
+
+
+SELECT name, get_employee_income(2021, 2, name) AS money_for_sold_products
+FROM employees
+WHERE NOT ISNULL(get_employee_income(2021, 2, name))
+LIMIT 15;
